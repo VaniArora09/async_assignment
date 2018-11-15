@@ -57,7 +57,6 @@ exports.setImmediateAndSetTimeout= function(req,res){
 }
 
 exports.basicAuto= function(req,res){
-    console.log("tyhe body is.....",req.body);
     var num1 = req.body.num1;
     var num2 = req.body.num2;
 
