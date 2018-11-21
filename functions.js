@@ -1,35 +1,108 @@
-var Promise            = require('bluebird');
-var async              = require('async');
-var eventEmitter       = require('events');
+const Promise            = require('bluebird');
+const async              = require('async');
+const eventEmitter       = require('events');
+const _                  = require('underscore');
 
-var services           = require('./services');
+const responses          = require('./routes/responses');
+const commonFunc          = require('./routes/commonfunctions');
+const services           = require('./services');
+
+exports.basicAwait= function(req,res){
+    let schema = Joi.object().keys ({
+        access_token                :    Joi.string().required(),
+        customer_name               :    Joi.string().required(),
+        app_device_type             :    joi.string().required(),
+        email                       :    Joi.string().required(),
+        phone_no                    :    Joi.string().required(),
+    });
+
+     let validation = Joi.validate(req.body, schema);
+     if (validation.error) {
+        return responses.parameterMissingResponse;
+      }
+     let manvalues = [email,phone_no]
+    try{
+        let result = await commonFunc.checkBlank(manvalues);
+        req.body.is_email_verified = 0; // by default
+        let check  = await commonFunc.checkEmailExits(req.body);
+        if(_.isEmpty(check)){
+            let customer = await commonFunc.insertCustomers(req.body);
+            return ({'customer_id': customer,'status':200});
+        }
+        else{
+            return responses.emailAlreadyExits(res);
+        }
+    } catch(e){
+        return e;
+    }    
+}
+exports.basicWaterfall= function(req,res){
+    
+    let schema = Joi.object().keys ({
+        customer_id                 :    Joi.number().required(),
+        access_token                :    Joi.string().required(),
+        is_email_verified           :    Joi.number().required(),
+        app_device_type             :    joi.string().required(),
+    });
+
+    let validation = Joi.validate(req.body, schema);
+    async.waterfall([
+        function(cb){
+            let manvalues =[req.body.access_token,req.body.customer_id,is_email_verified]
+            if (commonFunc.checkBlank([manvalues])) {
+                return responses.parameterMissingResponse(res);
+            }
+            return cb(null);
+        }, function(cb){
+            let sql = "SELECT is_email_verified FROM tb_customers where customer_id=? ";
+            connection.query(sql, [req.body.customer_id], function (error, result) {
+                if (error) {
+                    return cb(error);
+                }
+                 else {
+                     return cb(null,result);
+                    }
+                })
+            } , 
+            function(result,cb){
+                let sql = "UPDATE tb_customers SET is_email_verified =? WHERE customer_id =? ";
+                connection.query(sql, [1,req.body.customer_id], function (error, result) {
+                    if (error) {
+                        return cb(error);
+                    }
+                    else {
+                        return cb(null,result);
+                    }
+                })
+        }
+    ],function(err,result){
+        if(err) {
+            return err;
+        } else {
+            return result;
+        }
+    })
+    }
+    
 
 exports.setImmediateAndSetTimeout= function(req,res){
-    var events  = new eventEmitter();
     
-    console.log("start");
-   
-    setImmediate(()=>{
-        console.log("set");
-    });
-   
-    events.on('1',()=>{
-        console.log(HTMLDirectoryElement);
+    setImmediate(function A() {
+        setImmediate(function B() {
+          console.log(1);
+          setImmediate(function D() { console.log(2); });
+          setImmediate(function E() { console.log(3); });
+        });
+        setImmediate(function C() {
+          console.log(4);
+          setImmediate(function F() { console.log(5); });
+          setImmediate(function G() { console.log(6); });
+        });
       });
-   
-      events.on('2',()=>{
-       console.log(People);
-      });
-   
-      events.on('3',()=>{
-       console.log("How are you!!!!!!!!!!!!!");
-    });
-   
-    events.emit('1');
-    events.emit('2');
-    events.emit('3');
-   
-    console.log('end');
+      
+      setTimeout(function timeout() {
+        console.log('TIMEOUT FIRED');
+      }, 0)
    
     return ({status:200,message:"(successful",data:{}});
    }
@@ -57,9 +130,8 @@ exports.setImmediateAndSetTimeout= function(req,res){
 }
 
 exports.basicAuto= function(req,res){
-    console.log("tyhe body is.....",req.body);
-    var num1 = req.body.num1;
-    var num2 = req.body.num2;
+    let num1 = req.body.num1;
+    let num2 = req.body.num2;
 
     async.auto({
         addition : function(cb) {
@@ -81,51 +153,3 @@ exports.basicAuto= function(req,res){
     })
 }
 
-exports.basicAwait= function(req,res){
-    var num1   = req.body.first_no;
-    var num2   = req.body.second_no;
-    var result = {};
-
-    try{
-        var mul = await services.mult(num1,num2);
-        var div = await services.div(num1,num2);
-
-        data = {
-            multiply : mul,
-            div      : div
-        };
-        return data;
-
-    } catch(e){
-        return e;
-    }    
-}
-exports.basicWaterfall= function(req,res){
-    var num1 = req.body.num1;
-    var num2 = req.body.num2;
-    
-    async.waterfall([
-        function(cb){
-            var a= num1 + num2
-            return cb(null,null);
-    
-        }, function(result,cb){
-            var b = num1 * num2;
-            return cb(null,null);
-    
-        } , function(result,cb){
-            var c = num1/num2;
-            result.add =a;
-            result.multiply= b;
-            result.divide = c;
-            return cb(null,result);
-        }
-    ],function(err,result){
-        if(err) {
-            return err;
-        } else {
-            return result;
-        }
-    })
-    }
-    

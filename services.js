@@ -4,7 +4,7 @@ exports.mult= function(num1,num){
         if(!num1 && !num2){
             return reject("parameter missing")
         }
-        var c= num1*num2;
+        let c= num1*num2;
         return resolve(c)
     });
 }
@@ -14,7 +14,7 @@ exports.div= function(num1,num){
         if(!num1 && !num2){
             return reject("parameter missing")
         }
-        var c= num1/num2;
+        let c= num1/num2;
         return resolve(c)
     });
 }
